@@ -51,12 +51,12 @@ class Comment(db.Model):
             "child_comments": [child.to_dict() for child in self.child_comments]
         }
 
-# InsertedFile 모델
 class InsertedFile(db.Model):
     __tablename__ = 'inserted_file'
     id = db.Column(db.Integer, primary_key=True)
     uuid_file_name = db.Column(db.String(255), nullable=False)
     original_file_name = db.Column(db.String(255), nullable=False)
+    file_data = db.Column(db.LargeBinary, nullable=True)  # Store image as BLOB
     article_id = db.Column(db.Integer, db.ForeignKey('article.id'), nullable=False)
     article = db.relationship('Article', back_populates='files')
 
@@ -64,8 +64,10 @@ class InsertedFile(db.Model):
         return {
             "id": self.id,
             "uuid_file_name": self.uuid_file_name,
-            "original_file_name": self.original_file_name
+            "original_file_name": self.original_file_name,
+            "image_data": "data:image/png;base64," + base64.b64encode(self.file_data).decode('utf-8') if self.file_data else None
         }
+
 
 # User 모델
 class User(db.Model):
@@ -101,13 +103,17 @@ def home():
 def user_home():
     return render_template('user.html')
 
+
 @app.route('/api/articles', methods=['GET'])
 def get_articles():
     try:
         articles = Article.query.all()
         return jsonify([article.to_dict() for article in articles]), 200
     except Exception as e:
+        print("Error fetching articles:", e)  # 콘솔에 에러 메시지 출력
         return jsonify({"error": str(e)}), 500
+
+
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
