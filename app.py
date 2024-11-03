@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
@@ -113,8 +113,6 @@ def get_articles():
         print("Error fetching articles:", e)  # 콘솔에 에러 메시지 출력
         return jsonify({"error": str(e)}), 500
 
-
-
 @app.route('/api/users', methods=['GET'])
 def get_users():
     try:
@@ -122,6 +120,24 @@ def get_users():
         return jsonify([user.to_dict() for user in users]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/upload/file', methods=['GET'])
+def get_file():
+    article_id = request.args.get('articleId')
+    uuid_file_name = request.args.get('uuidFileName')
+
+    # 데이터베이스에서 해당 파일 조회
+    file_record = InsertedFile.query.filter_by(article_id=article_id, uuid_file_name=uuid_file_name).first()
+
+    if file_record:
+        # 이미지 데이터 반환
+        return (file_record.file_data, 200, {'Content-Type': 'image/png'})
+    else:
+        return jsonify({"error": "File not found"}), 404
+
+# 데이터베이스 article 엔티티 안에, content 칼럼에 텍스트 뿐만이 아니라, 이미지도 담겨있어서 1차로 조회되고
+# 2차로 조회되는게 별도의 엔티티에서 다시 불러오는 것 (인공지능 모델에 어느쪽을 넣어도 상관은 없다)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
